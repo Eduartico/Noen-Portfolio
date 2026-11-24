@@ -7,6 +7,9 @@ import { setupAsk } from './ask.js';
 
 const $ = (s) => document.querySelector(s);
 
+// blue tab icon on this PC, orange online
+if (/^(localhost|127\.)/.test(location.hostname)) $('link[rel=icon]').href = 'assets/icon-64-blue.png';
+
 // header
 const menu = $('#menu');
 menu.addEventListener('click', (e) => { if (e.target.closest('a')) menu.hidePopover(); });
