@@ -36,6 +36,8 @@ export function setupAsk() {
   };
 
   let shot = 0;
+  const pic = new Image();
+  pic.alt = 'Your clone';
   let seen = false;
   const card = () => {
     $('#brief-list').replaceChildren(...rows().flatMap(([a, b]) => {
@@ -51,9 +53,8 @@ export function setupAsk() {
     if (!blob) return;
     URL.revokeObjectURL(shot);
     shot = URL.createObjectURL(blob);
-    const img = $('#brief-pic');
-    img.src = shot;
-    img.hidden = false;
+    pic.src = shot;
+    if (!pic.isConnected) $('.brief-card').prepend(pic);
   };
   new IntersectionObserver((es) => {
     seen = es.some((e) => e.isIntersecting);
