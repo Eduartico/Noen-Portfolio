@@ -1,0 +1,16 @@
+export const poses = [
+  { id: 'low-ready', name: 'Low ready' },
+  { id: 'rifle-down', name: 'Rifle down' },
+  { id: 'hand-on-hip', name: 'Hand on hip' },
+  { id: 'shoulder', name: 'Rifle on shoulder' },
+  { id: 'grounded-one', name: 'Rifle at rest' },
+  { id: 'grounded-two', name: 'Leaning on rifle' },
+  { id: 'halt', name: 'Halt signal' },
+  { id: 'comms', name: 'On comms' },
+  { id: 'datapad', name: 'Datapad' },
+  { id: 'kneel', name: 'Kneeling' },
+  { id: 'run', name: 'Running' },
+  { id: 'pistol-up', name: 'Pistol up' },
+  { id: 'dual-aim', name: 'Aiming two pistols' },
+  { id: 'dual-belly', name: 'Close quarters' },
+];
