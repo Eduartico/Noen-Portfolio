@@ -105,7 +105,7 @@ export function setupBuilder() {
     for (const p of poses.slice(n, n + 8)) {
       const l = document.createElement('label');
       l.className = 'pose';
-      l.innerHTML = `<input type="radio" name="pose" value="${p.id}"><img src="assets/poses/${p.id}.webp" alt="" width="760" height="988" loading="lazy" decoding="async"><span></span>`;
+      l.innerHTML = `<input type="radio" name="pose" value="${p.id}"><img src="assets/poses/${p.id}.webp?v=2" alt="" width="760" height="988" loading="lazy" decoding="async"><span></span>`;
       l.querySelector('span').textContent = p.name;
       page.append(l);
     }
