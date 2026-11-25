@@ -136,7 +136,7 @@ export const ver = {
   a_lampr_arf: 'ffab09',
   a_lampr_para: '515c1d',
   a_lampr_barc: 'b0a4f1',
-  a_flaps: '44b302',
+  a_flaps: 'fb5850',
   a_fin: '7471cd',
   a_fin_shellp: '8b91a4',
   a_fin_para: '8870af',
