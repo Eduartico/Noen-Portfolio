@@ -1,5 +1,6 @@
 import { locations, vehicles } from './data.js';
 import { onKit, summary, link, picture } from './builder.js';
+import { say } from './toast.js';
 
 const $ = (s) => document.querySelector(s);
 const KEY = 'noen-brief';
@@ -48,9 +49,11 @@ export function setupAsk() {
       return [dt, dd];
     }));
   };
+  let turn = 0;
   const pose = async () => {
+    const mine = ++turn;
     const blob = await picture();
-    if (!blob) return;
+    if (!blob || mine !== turn) return;
     URL.revokeObjectURL(shot);
     shot = URL.createObjectURL(blob);
     pic.src = shot;
@@ -91,15 +94,6 @@ export function setupAsk() {
     return lines.join('\n');
   };
 
-  const toast = $('#toast');
-  let hide = 0;
-  const say = (msg) => {
-    toast.textContent = msg;
-    if (toast.showPopover && !toast.matches(':popover-open')) toast.showPopover();
-    clearTimeout(hide);
-    hide = setTimeout(() => toast.hidePopover?.(), 3400);
-  };
-
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     try {
@@ -108,13 +102,5 @@ export function setupAsk() {
     } catch {
       say('Copying was blocked by the browser. Allow clipboard access and try again.');
     }
-  });
-  $('#save-pic').addEventListener('click', async () => {
-    const blob = await picture();
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'clone.png';
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
   });
 }

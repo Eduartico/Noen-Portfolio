@@ -1,51 +1,32 @@
 export const contact = {
-  instagram: '',
+  instagram: 'https://www.instagram.com/commander.noen/',
   discord: '',
 };
 
-// A showcase is any themed set: a legion, a character, a type of trooper, a new helmet.
-export const showcases = [
+// One tile per entry; everything in `set` opens with it. span = columns out of 12, rows = row units.
+export const works = [
+  { id: 'quantum', title: '332nd Battle', span: 12, rows: 4, at: '50% 55%', set: ['quantum', 'quantum-1', 'quantum-2', 'quantum-3', 'quantum-4'] },
+  { id: 'arrest', title: 'Coruscant Chase', span: 7, rows: 4 },
+  { id: 'mygeeto', title: 'Mygeeto\'s Cold', span: 5, rows: 4, at: '78% 50%', set: ['mygeeto', 'mygeeto-1', 'mygeeto-2', 'mygeeto-3', 'mygeeto-4'] },
+  { id: 'felucia', title: 'Jungle Deployment', span: 5, rows: 3, at: '100% 60%', set: ['felucia', 'felucia-1', 'felucia-2', 'felucia-3'] },
+  { id: 'kachirho', title: 'First Contact', span: 7, rows: 3 },
   {
-    id: '332nd', title: '332nd Company',
-    items: [
-      { id: '332-vaughn', title: 'Vaughn' },
-      { id: '332-appo', title: 'Appo' },
-      { id: '332-grunt', title: 'Trooper with Z-6' },
-      { id: '332-noen', title: 'Noen' },
-    ],
+    id: '332-vaughn', title: '332nd Company', span: 4, rows: 4, at: '50% 12%',
+    set: [['332-vaughn', 'Vaughn'], ['332-appo', 'Appo'], ['332-grunt', 'Trooper with Z-6'], ['332-noen', 'Noen']],
   },
   {
-    id: '14th', title: '14th Panda Company',
-    items: [
-      { id: '14-titus', title: 'Titus' },
-      { id: '14-claw', title: 'Claw' },
-      { id: '14-slate', title: 'Slate' },
-      { id: 'panda-grunt', title: 'Trooper' },
-    ],
+    id: 'rex-pistols', title: 'Captain Rex', span: 4, rows: 4, at: '50% 12%',
+    set: [['rex-pistols', 'Captain Rex'], ['rex-aim', 'Captain Rex'], ['rex-belly', 'Captain Rex'], ['rex-run', 'Captain Rex']],
   },
   {
-    id: 'rex', title: 'Captain Rex',
-    items: [
-      { id: 'rex-pistols', title: 'Pistols up' },
-      { id: 'rex-aim', title: 'Aiming' },
-      { id: 'rex-belly', title: 'Close quarters' },
-      { id: 'rex-run', title: 'Running' },
-    ],
+    id: '14-titus', title: '14th Panda Company', span: 4, rows: 4, at: '50% 12%',
+    set: [['14-titus', 'Titus'], ['14-claw', 'Claw'], ['14-slate', 'Slate'], ['panda-grunt', 'Trooper']],
   },
-];
-
-// span = columns out of 12 on wide screens, rows = row units, more = close-ups shown with it
-export const scenes = [
-  { id: 'quantum', title: 'Quantum Squad', span: 12, rows: 4, at: '50% 55%', more: ['quantum-1', 'quantum-2', 'quantum-3', 'quantum-4'] },
-  { id: 'arrest', title: 'The arrest', span: 7, rows: 4 },
-  { id: 'mygeeto', title: 'Mygeeto bridge', span: 5, rows: 4, at: '78% 50%', more: ['mygeeto-1', 'mygeeto-2', 'mygeeto-3', 'mygeeto-4'] },
-  { id: 'felucia', title: 'Felucia advance', span: 5, rows: 3, at: '100% 60%', more: ['felucia-1', 'felucia-2', 'felucia-3'] },
-  { id: 'kachirho', title: 'Kachirho', span: 7, rows: 3 },
-  { id: 'magnaguard', title: 'Magnaguard attack', span: 6, rows: 3, more: ['magnaguard-1', 'magnaguard-2'] },
-  { id: 'panda-battle', title: 'Night battle', span: 6, rows: 3, more: ['panda-battle-1', 'panda-battle-2', 'panda-battle-3', 'panda-battle-4'] },
-  { id: 'umbara', title: 'Umbara', span: 4, rows: 3 },
-  { id: 'venator', title: 'Venator briefing', span: 4, rows: 3, at: '50% 60%', more: ['venator-1', 'venator-2'] },
-  { id: 'tx-hangar', title: 'TX-130 hangar', span: 4, rows: 3, at: '50% 60%' },
+  { id: 'magnaguard', title: 'Magnaguard Attack', span: 6, rows: 3, set: ['magnaguard', 'magnaguard-1', 'magnaguard-2'] },
+  { id: 'panda-battle', title: 'Night Battle', span: 6, rows: 3, set: ['panda-battle', 'panda-battle-1', 'panda-battle-2', 'panda-battle-3', 'panda-battle-4'] },
+  { id: 'umbara', title: 'Light in Shadow', span: 4, rows: 3 },
+  { id: 'venator', title: 'Venator Briefing', span: 4, rows: 3, at: '50% 60%', set: ['venator', 'venator-1', 'venator-2'] },
+  { id: 'tx-hangar', title: 'Hangar Preparation', span: 4, rows: 3, at: '50% 60%' },
 ];
 
 // shown when a scene is picked

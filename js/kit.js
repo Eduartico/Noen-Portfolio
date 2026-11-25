@@ -1,4 +1,4 @@
-import { size, frames, boxes } from './kit-data.js';
+import { size, frames, boxes, layers, fine, ver } from './kit-data.js';
 
 const mod = (n, m) => ((n % m) + m) % m;
 const pad = (n) => String(n).padStart(2, '0');
@@ -21,13 +21,23 @@ uniform sampler2D colour;
 uniform sampler2D depth;
 uniform float bias;
 uniform int pass;
+uniform bool fine;
 out vec4 o;
+float far(vec2 at) {
+  vec2 d = texture(depth, at).rg;
+  return fine ? (d.r * 4080.0 + d.g * 15.9375) / 4095.0 : d.r;
+}
 void main() {
   vec4 c = texture(colour, uv);
   bool solid = c.a > 0.9;
   if (c.a < 0.02 || (pass == 0) != solid) discard;
-  gl_FragDepth = clamp(texture(depth, uv).r + bias, 0.0, 1.0);
-  o = vec4(c.rgb * c.a, c.a);
+  float z = far(uv);
+  if (!solid) { // a soft edge reaches into the empty pixels next to it, which have no depth of their own
+    vec2 px = 1.0 / vec2(textureSize(depth, 0));
+    for (int i = 0; i < 9; i++) z = min(z, far(uv + px * vec2(i % 3 - 1, i / 3 - 1)));
+  }
+  gl_FragDepth = clamp(z + bias, 0.0, 1.0);
+  o = c;
 }`;
 
 // One piece of gear: a colour picture and a depth picture per angle.
@@ -37,17 +47,20 @@ class Part {
     this.wake = wake;
     this.box = boxes[id];
     this.got = new Array(frames);
-    this.asked = new Set();
+    this.asked = new Map();
     this.level = 0;
   }
 
-  async one(n) {
-    if (this.asked.has(n)) return;
-    this.asked.add(n);
+  one(n) {
+    if (!this.asked.has(n)) this.asked.set(n, this.get(n));
+    return this.asked.get(n);
+  }
+
+  async get(n) {
     try {
-      const opt = { premultiplyAlpha: 'none', colorSpaceConversion: 'none' };
+      const opt = { premultiplyAlpha: 'premultiply', colorSpaceConversion: 'none' };
       const [c, z] = await Promise.all(['c', 'z'].map(async (k) => {
-        const r = await fetch(`assets/kit/${this.id}/${k}${pad(n)}.webp`);
+        const r = await fetch(`assets/kit/${this.id}/${k}${pad(n)}.webp?v=${ver[this.id]}`);
         if (!r.ok) throw new Error(r.status);
         return r.blob();
       }));
@@ -90,7 +103,7 @@ export class Kit {
     this.cam = { x: 0.5, y: 0.5, z: 1 };
     this.to = { x: 0.5, y: 0.5, z: 1 };
     this.tex = new Map();
-    this.busy = new Set();
+    this.busy = new Map();
     this.calm = matchMedia('(prefers-reduced-motion: reduce)');
     this.raf = 0;
     if (this.gl) this.setup();
@@ -112,7 +125,7 @@ export class Kit {
     const loc = gl.getAttribLocation(pr, 'p');
     gl.enableVertexAttribArray(loc);
     gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-    this.u = Object.fromEntries(['box', 'cam', 'colour', 'depth', 'bias', 'pass'].map((n) => [n, gl.getUniformLocation(pr, n)]));
+    this.u = Object.fromEntries(['box', 'cam', 'colour', 'depth', 'bias', 'pass', 'fine'].map((n) => [n, gl.getUniformLocation(pr, n)]));
     gl.uniform1i(this.u.colour, 0);
     gl.uniform1i(this.u.depth, 1);
     gl.enable(gl.DEPTH_TEST);
@@ -150,7 +163,14 @@ export class Kit {
     this.wake();
   }
 
-  frame() { return mod(Math.round((this.angle / 360) * frames), frames); }
+  // the last bit of a spin: a short glide that ends exactly on a frame
+  settle() {
+    const s = 360 / frames;
+    this.turnTo = Math.round((this.angle + this.speed * 90) / s) * s;
+    this.speed = 0;
+  }
+
+  frame(angle = this.angle) { return mod(Math.round((angle / 360) * frames), frames); }
 
   bind() {
     const el = this.root;
@@ -176,6 +196,7 @@ export class Kit {
       id = null; this.held = false;
       el.classList.remove('held');
       if (e.timeStamp - t > 80 || this.calm.matches) this.speed = 0;
+      if (Math.abs(this.speed) < 0.09) this.settle();
       this.wake();
     };
     el.addEventListener('pointerup', end);
@@ -205,15 +226,16 @@ export class Kit {
     const dt = this.last ? Math.min(40, t - this.last) : 16;
     this.last = t;
     let more = this.held;
-    if (!this.held && Math.abs(this.speed) > 0.002) {
+    if (!this.held && this.speed) {
       this.angle += this.speed * dt;
       this.speed *= Math.exp(-dt / 320);
+      if (Math.abs(this.speed) < 0.09) this.settle();
       more = true;
     }
     if (this.turnTo !== null) {
       const d = this.turnTo - this.angle;
-      this.angle += d * (1 - Math.exp(-dt / 170));
-      if (Math.abs(d) < 0.4) { this.angle = this.turnTo; this.turnTo = null; }
+      this.angle += d * (1 - Math.exp(-dt / 120));
+      if (Math.abs(d) < 180 / frames) { this.angle = this.turnTo; this.turnTo = null; }
       more = true;
     }
     for (const k of ['x', 'y', 'z']) {
@@ -229,17 +251,23 @@ export class Kit {
     const key = `${part.id}/${n}`;
     const hit = this.tex.get(key);
     if (hit) { this.tex.delete(key); this.tex.set(key, hit); return hit; }
+    if (part.got[n]) this.upload(part, n);
+    return null;
+  }
+
+  upload(part, n) {
+    const key = `${part.id}/${n}`;
     const g = part.got[n];
-    if (!g || this.busy.has(key)) return null;
-    this.busy.add(key);
-    Promise.all([createImageBitmap(g.c, g.opt), createImageBitmap(g.z, g.opt)]).then(([c, z]) => {
+    if (!g || this.tex.has(key)) return null;
+    if (this.busy.has(key)) return this.busy.get(key);
+    const job = Promise.all([createImageBitmap(g.c, g.opt), createImageBitmap(g.z, g.opt)]).then(([c, z]) => {
       const { gl } = this;
       const up = (bmp, fmt, internal) => {
         const t = gl.createTexture();
         gl.bindTexture(gl.TEXTURE_2D, t);
-        gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+        gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, internal === gl.RGBA8);
         gl.texImage2D(gl.TEXTURE_2D, 0, internal, fmt, gl.UNSIGNED_BYTE, bmp);
-        const f = internal === gl.R8 ? gl.NEAREST : gl.LINEAR;
+        const f = internal === gl.RG8 ? gl.NEAREST : gl.LINEAR;
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, f);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, f);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -248,7 +276,7 @@ export class Kit {
         return t;
       };
       gl.activeTexture(gl.TEXTURE0);
-      this.tex.set(key, { c: up(c, gl.RGBA, gl.RGBA8), z: up(z, gl.RED, gl.R8) });
+      this.tex.set(key, { c: up(c, gl.RGBA, gl.RGBA8), z: up(z, gl.RG, gl.RG8) });
       this.busy.delete(key);
       const limit = Math.max(60, this.on.length * 8);
       while (this.tex.size > limit) {
@@ -259,10 +287,11 @@ export class Kit {
       }
       this.wake();
     }, () => this.busy.delete(key));
-    return null;
+    this.busy.set(key, job);
+    return job;
   }
 
-  draw() {
+  draw(angle = this.angle, cam = this.cam) {
     const { gl, canvas } = this;
     if (!gl) return;
     gl.viewport(0, 0, canvas.width, canvas.height);
@@ -270,11 +299,11 @@ export class Kit {
     gl.clearDepth(1);
     gl.depthMask(true);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    const n = this.frame();
+    const n = this.frame(angle);
     // whole frame fits the box: height first, then width
     const ar = canvas.width / canvas.height;
     const fit = Math.min(1, ar / 0.42);
-    const sy = fit * this.cam.z;
+    const sy = fit * cam.z;
     const sx = (sy * (size[0] / size[1])) / ar;
     const list = [];
     for (const id of this.on) {
@@ -284,22 +313,32 @@ export class Kit {
       const t = this.pair(part, k) || this.any(part, k);
       if (t) list.push([id, part, t]);
     }
-    for (const pass of [0, 1]) {
+    const draw = (some, pass) => {
       gl.uniform1i(this.u.pass, pass);
       gl.depthMask(pass === 0);
-      for (const [id, part, t] of list) {
+      for (const [id, part, t] of some) {
         const [x, y, w, h] = part.box;
         gl.uniform4f(this.u.box, (x / size[0] - 0.5) * sx + 0.5, (y / size[1] - 0.5) * sy + 0.5, (w / size[0]) * sx, (h / size[1]) * sy);
-        gl.uniform3f(this.u.cam, 0.5 + (this.cam.x - 0.5) * sx, 0.5 + (this.cam.y - 0.5) * sy, 1);
-        gl.uniform1f(this.u.bias, id === 'body' ? 0 : -0.006);
+        gl.uniform3f(this.u.cam, 0.5 + (cam.x - 0.5) * sx, 0.5 + (cam.y - 0.5) * sy, 1);
+        gl.uniform1f(this.u.bias, id.startsWith('h_') ? 0.016 : -0.014 * (layers[id] || 0));
+        gl.uniform1i(this.u.fine, fine.has(id) ? 1 : 0);
         gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, t.c);
         gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, t.z);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
       }
-    }
+    };
+    // every other picture is already cut out where the body is in front of it, so the body goes first and leaves no depth
+    const body = list.filter(([id]) => id.startsWith('body'));
+    const rest = list.filter(([id]) => !id.startsWith('body'));
+    draw(body, 0);
+    draw(body, 1);
+    gl.depthMask(true);
+    gl.clear(gl.DEPTH_BUFFER_BIT);
+    draw(rest, 0);
+    draw(rest, 1);
     const w = this.root.clientWidth, h = this.root.clientHeight;
     const px = (sx * w) / size[0];
-    this.ground.style.transform = `translate(${(0.5 - (this.cam.x - 0.5) * sx) * w}px, ${((0.955 - this.cam.y) * sy + 0.5) * h}px) scale(${px})`;
+    this.ground.style.transform = `translate(${(0.5 - (cam.x - 0.5) * sx) * w}px, ${((0.955 - cam.y) * sy + 0.5) * h}px) scale(${px})`;
     this.ground.style.opacity = list.length ? 1 : 0;
   }
 
@@ -315,9 +354,14 @@ export class Kit {
     return best;
   }
 
-  // the clone alone, cut out of the canvas
-  picture() {
-    this.draw();
+  // the clone alone from one angle, cut out of the canvas; the view stays where it is
+  async picture(angle) {
+    const n = this.frame(angle);
+    const parts = this.on.map((id) => this.parts.get(id)).filter(Boolean);
+    if (!this.gl || !parts.length) return null;
+    await Promise.all(parts.map((p) => p.one(n)));
+    await Promise.all(parts.map((p) => this.upload(p, n)));
+    this.draw(angle, { x: 0.5, y: 0.5, z: 1 });
     const { width: w, height: h } = this.canvas;
     const fit = Math.min(1, w / h / 0.42);
     const fw = Math.min(w, h * fit * (size[0] / size[1]) * 0.86);
@@ -326,6 +370,7 @@ export class Kit {
     c.width = Math.round(fw);
     c.height = Math.round(fh);
     c.getContext('2d').drawImage(this.canvas, (w - fw) / 2, (h - fh) / 2, fw, fh, 0, 0, c.width, c.height);
+    this.draw();
     return new Promise((r) => c.toBlob(r, 'image/png'));
   }
 }

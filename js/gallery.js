@@ -1,4 +1,4 @@
-import { showcases, scenes } from './data.js';
+import { works } from './data.js';
 
 const $ = (s) => document.querySelector(s);
 const calm = matchMedia('(prefers-reduced-motion: reduce)');
@@ -22,34 +22,13 @@ function tile(item, label, sizes, set, n) {
   return b;
 }
 
-// showcases
-for (const show of showcases) {
-  const art = document.createElement('article');
-  art.className = 'show';
-  art.id = `show-${show.id}`;
-  const h = document.createElement('h3');
-  h.textContent = show.title;
-  const ul = document.createElement('ul');
-  ul.className = 'strip';
-  ul.tabIndex = 0;
-  ul.setAttribute('aria-label', show.title);
-  show.items.forEach((item, n) => {
-    const li = document.createElement('li');
-    li.append(tile(item, `${item.title}, ${show.title}`, '(max-width: 40rem) 72vw, 25vw', show.items, n));
-    ul.append(li);
-  });
-  art.append(h, ul);
-  $('#shows').append(art);
-}
-
-// scenes
-for (const s of scenes) {
+for (const w of works) {
   const li = document.createElement('li');
-  li.className = 'tile';
-  li.style.setProperty('--span', s.span);
-  li.style.setProperty('--rows', s.rows);
-  const set = [s, ...(s.more || []).map((id) => ({ id, title: s.title }))];
-  li.append(tile(s, s.title, `(max-width: 40rem) 100vw, ${Math.round((s.span / 12) * 100)}vw`, set, 0));
+  li.className = w.rows === 4 && w.span === 4 ? 'tile tall' : 'tile';
+  li.style.setProperty('--span', w.span);
+  li.style.setProperty('--rows', w.rows);
+  const set = (w.set || [w.id]).map((e) => (Array.isArray(e) ? { id: e[0], title: e[1] } : { id: e, title: w.title }));
+  li.append(tile(w, w.title, `(max-width: 40rem) 100vw, ${Math.round((w.span / 12) * 100)}vw`, set, 0));
   $('#wall').append(li);
 }
 

@@ -13,4 +13,9 @@ export const poses = [
   { id: 'pistol-up', name: 'Pistol up' },
   { id: 'dual-aim', name: 'Aiming two pistols' },
   { id: 'dual-belly', name: 'Close quarters' },
+  { id: 'ready', name: 'Ready' },
+  { id: 'up-across', name: 'Rifle up across' },
+  { id: 'lookout', name: 'Kneeling lookout' },
+  { id: 'on-floor', name: 'Rifle on the floor' },
+  { id: 'behind-back', name: 'Hands behind back' },
 ];

@@ -1,6 +1,10 @@
-const KEEP = 48;
+const KEEP = 72;
 const SOFT = 16;
+const COARSE = 24;
+const LANES = Math.max(3, Math.min(8, (navigator.hardwareConcurrency || 8) - 2));
 const mod = (n, m) => ((n % m) + m) % m;
+// speeds in degrees per millisecond: the fastest free spin, its drag, and the brake that brings it to a stop
+const FAST = 1.1, FREE = 620, SLOW = 0.2, BRAKE = 0.0016;
 
 // tiny dark copy of a frame; drawn large it becomes a soft shadow
 function shade(b) {
@@ -25,7 +29,16 @@ class Reel {
     this.bitmaps = new Map();
     this.pending = new Set();
     this.asked = new Set();
-    this.level = 0;
+    this.scale = 1;
+  }
+
+  // frames are decoded at the size they are drawn
+  fit(scale) {
+    const s = Math.min(1, Math.ceil(scale * 20) / 20);
+    if (s === this.scale) return;
+    this.scale = s;
+    for (const f of this.bitmaps.values()) f.b.close();
+    this.bitmaps.clear();
   }
 
   async load(step) {
@@ -40,7 +53,7 @@ class Reel {
       while (next < jobs.length) {
         const n = jobs[next++];
         try {
-          const r = await fetch(`assets/spin/${this.t.id}/${String(n).padStart(3, '0')}.webp`);
+          const r = await fetch(`assets/spin/${this.t.id}/${String(n).padStart(3, '0')}.webp?v=${this.t.v}`);
           if (!r.ok) continue;
           this.blobs[n] = await r.blob();
           this.onReady(this, n);
@@ -58,36 +71,75 @@ class Reel {
     return -1;
   }
 
+  // frames every reel keeps, so even a very fast turn has a picture close by
+  coarse(n) { return n % Math.max(1, Math.round(this.t.frames / COARSE)) === 0; }
+
+  // starts on the most urgent frames; what nobody needs any more never gets in line
+  plan(list) {
+    for (const n of list) {
+      if (this.pending.size >= LANES) return;
+      this.decode(n);
+    }
+  }
+
   decode(n) {
     if (this.bitmaps.has(n) || this.pending.has(n) || !this.blobs[n]) return;
     this.pending.add(n);
-    createImageBitmap(this.blobs[n]).then((b) => {
+    const { scale } = this;
+    const size = async () => {
+      if (!this.wide) { const p = await createImageBitmap(this.blobs[n]); this.wide = p.width; this.high = p.height; p.close(); }
+      const opt = scale < 1 ? { resizeWidth: Math.round(this.wide * scale), resizeHeight: Math.round(this.high * scale), resizeQuality: 'medium' } : undefined;
+      return createImageBitmap(this.blobs[n], ...(opt ? [opt] : []));
+    };
+    size().then((b) => {
       this.pending.delete(n);
-      this.bitmaps.set(n, { b, soft: shade(b) });
+      if (scale !== this.scale) { b.close(); this.onReady(this, n); return; }
+      this.bitmaps.set(n, { b });
       if (this.bitmaps.size > KEEP) {
-        const [old] = this.bitmaps.keys();
-        this.bitmaps.get(old).b.close();
-        this.bitmaps.delete(old);
+        for (const old of this.bitmaps.keys()) {
+          if (this.coarse(old)) continue;
+          this.bitmaps.get(old).b.close();
+          this.bitmaps.delete(old);
+          break;
+        }
       }
       this.onReady(this, n);
     }, () => this.pending.delete(n));
   }
 
-  // best bitmap for an angle, and queues the frames around it
-  at(angle, dir) {
-    const n = mod(Math.round((angle / 360) * this.t.frames), this.t.frames);
-    const want = this.nearest(n, (k) => this.blobs[k]);
-    if (want >= 0) this.decode(want);
-    for (let d = 1; d <= 5; d++) {
-      const k = mod(n + d * (dir || 1), this.t.frames);
-      this.decode(k);
+  take(n) {
+    const f = this.bitmaps.get(n);
+    if (f) { this.bitmaps.delete(n); this.bitmaps.set(n, f); }
+    return f;
+  }
+
+  // the picture for an angle: the two frames either side of it and how far it is between them. pace = frames it moves per tick
+  at(angle, pace) {
+    const N = this.t.frames;
+    const x = (angle / 360) * N;
+    const n = mod(Math.round(x), N);
+    const quick = Math.abs(pace) > 1.1;
+    const want = [this.nearest(n, (k) => this.blobs[k])];
+    if (quick) for (let k = 1; k <= 7; k++) want.push(mod(Math.round(x + pace * k), N));
+    else {
+      const dir = pace < 0 ? -1 : 1;
+      want.push(mod(Math.floor(x), N), mod(Math.floor(x) + 1, N));
+      for (let d = 1; d <= 6; d++) want.push(mod(n + d * dir, N));
+      for (let d = 1; d <= 3; d++) want.push(mod(n - d * dir, N));
+    }
+    const gap = Math.max(1, Math.round(N / COARSE));
+    for (let d = 0; d < N; d += gap) want.push(mod(Math.round(n / gap) * gap + d, N));
+    this.plan(want.filter((k) => k >= 0));
+    if (!quick) {
+      const a = mod(Math.floor(x), N), b = mod(Math.floor(x) + 1, N);
+      if (this.bitmaps.has(a) && this.bitmaps.has(b)) {
+        const f = x - Math.floor(x);
+        const u = Math.max(0, Math.min(1, (f - 0.2) / 0.6));
+        return { a: this.take(a), b: this.take(b), f: u * u * (3 - 2 * u) };
+      }
     }
     const got = this.nearest(n, (k) => this.bitmaps.has(k));
-    if (got < 0) return null;
-    const f = this.bitmaps.get(got);
-    this.bitmaps.delete(got);
-    this.bitmaps.set(got, f);
-    return f;
+    return got < 0 ? null : { a: this.take(got), f: 0 };
   }
 }
 
@@ -109,6 +161,7 @@ export class Stage {
     this.lean = 0;
     this.leanTo = 0;
     this.scroll = 0;
+    this.scrollTo = 0;
     this.shift = 0;
     this.held = false;
     this.cur = null;
@@ -117,6 +170,11 @@ export class Stage {
     this.dir = 1;
     this.raf = 0;
     this.last = 0;
+    this.stop = null;
+    this.melt = document.createElement('canvas');
+    this.load = [];
+    this.going = 0;
+    this.lite = (navigator.deviceMemory || 8) <= 4 || (navigator.hardwareConcurrency || 8) <= 4;
     // the full set only downloads once somebody moves, scrolls or taps
     this.touched = new Promise((go) => {
       for (const type of ['pointermove', 'pointerdown', 'keydown', 'scroll']) addEventListener(type, go, { once: true, passive: true });
@@ -138,7 +196,8 @@ export class Stage {
     }
     this.cur = reel;
     this.speed = 0;
-    this.angle = reel.t.start;
+    this.stop = null;
+    this.angle = Math.round(reel.t.start / this.step()) * this.step();
     this.mix = instant || !this.prev ? 1 : 0;
     this.wake();
     const { frames } = reel.t;
@@ -154,13 +213,29 @@ export class Stage {
 
   view() { return this.angle + this.lean + this.scroll; }
 
+  step() { return this.cur ? 360 / this.cur.t.frames : 2; }
+
+  // the last bit of a spin: an even brake, a touch softer or harder so that it ends exactly on a frame
+  settle() {
+    const s = this.step();
+    const from = this.angle;
+    const rest = this.view() - this.angle;
+    const v = this.speed;
+    const to = Math.round((from + Math.sign(v) * (v * v) / (2 * BRAKE) + rest) / s) * s - rest;
+    const by = to - from;
+    this.speed = 0;
+    // without a push, or with the nearest frame behind it, it only glides there
+    const ms = Math.abs(v) > 0.02 && by * v > 0 ? (2 * by) / v : 120;
+    this.stop = { from, by, t: 0, ms: Math.max(60, Math.min(260, ms)) };
+  }
+
   bind() {
     const el = this.root;
     let x = 0, t = 0, id = null, moved = false;
     el.addEventListener('pointerdown', (e) => {
       if (id !== null || e.button) return;
       id = e.pointerId; x = e.clientX; t = e.timeStamp; moved = false;
-      this.speed = 0; this.held = true;
+      this.speed = 0; this.held = true; this.stop = null;
       el.setPointerCapture(id);
       el.classList.add('held');
       this.wake();
@@ -182,6 +257,8 @@ export class Stage {
       id = null; this.held = false;
       el.classList.remove('held');
       if (e.timeStamp - t > 80 || this.calm.matches) this.speed = 0;
+      this.speed = Math.max(-FAST, Math.min(FAST, this.speed));
+      if (Math.abs(this.speed) < SLOW) this.settle();
       this.wake();
     };
     el.addEventListener('pointerup', end);
@@ -191,13 +268,18 @@ export class Stage {
       if (!k) return;
       e.preventDefault();
       this.speed = 0;
+      this.stop = null;
       this.angle += k;
+      this.settle();
       this.onFirstDrag?.();
       this.wake();
     });
     addEventListener('pointermove', (e) => {
-      if (this.held || this.calm.matches || !this.fine.matches || e.pointerType !== 'mouse') return;
-      this.leanTo = -(e.clientX / innerWidth - 0.5) * 90;
+      if (this.held || this.lite || this.calm.matches || !this.fine.matches || e.pointerType !== 'mouse') return;
+      const step = this.step();
+      const to = Math.round((-(e.clientX / innerWidth - 0.5) * 76) / step) * step;
+      if (to === this.leanTo) return;
+      this.leanTo = to;
       this.wake();
     }, { passive: true });
   }
@@ -205,8 +287,9 @@ export class Stage {
   setScroll(p) {
     const s = this.calm.matches ? 0 : p * 22;
     const shift = this.narrow.matches ? 0 : p;
-    if (s === this.scroll && shift === this.shift) return;
-    this.scroll = s;
+    const to = Math.round(s / this.step()) * this.step();
+    if (to === this.scrollTo && shift === this.shift) return;
+    this.scrollTo = to;
     this.shift = shift;
     this.wake();
   }
@@ -214,13 +297,14 @@ export class Stage {
   size() {
     const r = this.root.getBoundingClientRect();
     if (!r.width) return;
-    const d = Math.min(devicePixelRatio || 1, 2);
+    const d = Math.min(devicePixelRatio || 1, this.lite ? 1 : 2);
     this.w = r.width; this.h = r.height; this.d = d;
     this.floor = this.narrow.matches ? this.pickTop() - 34 : r.height * 0.925;
     this.size1 = this.narrow.matches ? Math.min(this.floor * 0.8, r.width * 1.5) : r.height * 0.8;
     this.root.parentElement.style.setProperty('--floor', `${this.floor + (this.narrow.matches ? 34 : 14)}px`);
     this.canvas.width = Math.round(r.width * d);
     this.canvas.height = Math.round(r.height * d);
+    for (const reel of this.reels.values()) reel.fit((this.size1 / reel.t.tall) * d);
     this.draw();
   }
 
@@ -229,21 +313,52 @@ export class Stage {
   tick(t) {
     const dt = this.last ? Math.min(40, t - this.last) : 16;
     this.last = t;
+    const was = this.view();
     let busy = this.held;
-    if (!this.held && Math.abs(this.speed) > 0.002) {
+    if (!this.held && this.speed) {
       this.angle += this.speed * dt;
-      this.speed *= Math.exp(-dt / 320);
+      this.speed = Math.sign(this.speed) * Math.max(0, (Math.abs(this.speed) + BRAKE * 0.4 * FREE) * Math.exp(-dt / FREE) - BRAKE * 0.4 * FREE);
+      if (Math.abs(this.speed) < SLOW) this.settle();
       busy = true;
     }
-    const lean = this.leanTo - this.lean;
-    if (Math.abs(lean) > 0.08) { this.lean += lean * (1 - Math.exp(-dt / 95)); busy = true; }
+    if (this.stop) {
+      const s = this.stop;
+      s.t = Math.min(1, s.t + dt / s.ms);
+      this.angle = s.from + s.by * (1 - (1 - s.t) ** 2);
+      if (s.t === 1) this.stop = null;
+      busy = true;
+    }
+    // follows the cursor at a limited pace and arrives on a whole frame instead of creeping towards it
+    for (const k of ['lean', 'scroll']) {
+      const d = this[`${k}To`] - this[k];
+      if (!d) continue;
+      const go = Math.max(Math.abs(d) * (1 - Math.exp(-dt / 130)), this.step() * (dt / 90));
+      this[k] = go >= Math.abs(d) ? this[`${k}To`] : this[k] + Math.sign(d) * go;
+      busy = true;
+    }
+    this.pace(dt, busy);
     if (this.mix < 1) {
       this.mix = Math.min(1, this.mix + dt / 720);
       if (this.mix === 1) this.prev = null;
       busy = true;
     }
+    this.going = (this.view() - was) / this.step();
     this.draw();
     this.raf = busy ? requestAnimationFrame((n) => this.tick(n)) : 0;
+  }
+
+  // a computer that cannot keep up gets plain frames at normal sharpness
+  pace(dt, busy) {
+    if (this.lite || !busy || !this.cur || this.mix < 1) { this.load.length = 0; return; }
+    this.load.push(dt);
+    if (this.load.length < 40) return;
+    const slow = this.load.filter((x) => x > 30).length;
+    this.load.length = 0;
+    if (slow > 16) {
+      this.lite = true;
+      this.leanTo = 0;
+      this.size();
+    }
   }
 
   draw() {
@@ -264,9 +379,22 @@ export class Stage {
   }
 
   put(reel, angle, dx, alpha) {
-    const f = reel.at(angle, Math.sign(this.speed) || 1);
-    if (!f || alpha <= 0) return;
-    const { b, soft } = f;
+    const p = reel.at(angle, reel === this.cur ? this.going : 0);
+    if (!p || alpha <= 0) return;
+    const soft = (p.a.soft ||= shade(p.a.b));
+    let { b } = p.a;
+    if (p.f > 0 && !this.lite) {
+      const m = this.melt;
+      if (m.width !== b.width || m.height !== b.height) { m.width = b.width; m.height = b.height; }
+      const x = m.getContext('2d');
+      x.globalCompositeOperation = 'copy';
+      x.globalAlpha = 1 - p.f;
+      x.drawImage(b, 0, 0);
+      x.globalCompositeOperation = 'lighter';
+      x.globalAlpha = p.f;
+      x.drawImage(p.b.b, 0, 0);
+      b = m;
+    } else if (p.f >= 0.5 && p.b) b = p.b.b;
     this.root.classList.add('ready');
     const { ctx, w, h } = this;
     const { tall, foot } = reel.t;
@@ -274,7 +402,8 @@ export class Stage {
     const ground = this.floor;
     const cx = w / 2 + dx + this.shift * w * 0.2;
     ctx.globalAlpha = alpha;
-    const fw = b.width * s, fh = b.height * s;
+    const q = (reel.wide * s) / p.a.b.width;
+    const fw = b.width * q, fh = b.height * q;
     const gx = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
     gx.addColorStop(0, 'rgba(12,10,9,.62)');
     gx.addColorStop(1, 'rgba(12,10,9,0)');
@@ -285,7 +414,7 @@ export class Stage {
     ctx.fillRect(-1, -1, 2, 2);
     ctx.restore();
     const x = cx - fw / 2, y = ground - fh + foot * s;
-    const k = SOFT * s, off = this.size1 * 0.028;
+    const k = SOFT * q, off = this.size1 * 0.028;
     ctx.imageSmoothingQuality = 'high';
     ctx.globalAlpha = alpha * 0.55;
     ctx.drawImage(soft, x - 2 * k + off, y - 2 * k + off * 0.5, soft.width * k, soft.height * k);

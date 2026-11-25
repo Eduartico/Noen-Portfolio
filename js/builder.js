@@ -1,6 +1,9 @@
 import { Kit } from './kit.js';
 import { areas, gear } from './gear.js';
 import { poses } from './poses.js';
+import { icons } from './icons.js';
+import { ver } from './kit-data.js';
+import { say } from './toast.js';
 
 const $ = (s) => document.querySelector(s);
 const ready = gear.filter((g) => !g.soon);
@@ -11,29 +14,53 @@ export const onKit = (fn) => listeners.push(fn);
 
 const state = { kit: ['h_p2'], pose: 'rifle-down' };
 let area = areas[0].id;
+const FRONT = 25;
 
-// rules: one helmet, pieces that only fit some helmets, pieces that replace each other
+// two pieces that cannot be worn together
+const clash = (a, b) => a.id !== b.id && ((a.slot && a.slot === b.slot) || !!a.off?.includes(b.id) || !!b.off?.includes(a.id));
+
+// rules: one helmet, pieces that only fit some helmets, later pieces push out the ones they clash with
 function tidy(ids) {
-  const helmet = ids.find((id) => byId.get(id)?.slot === 'helmet') || 'h_p2';
-  let out = ids.filter((id) => byId.has(id));
-  out = out.filter((id) => byId.get(id).slot !== 'helmet' || id === helmet);
-  if (!out.includes(helmet)) out.unshift(helmet);
-  out = out.filter((id) => !byId.get(id).only || byId.get(id).only.includes(helmet));
+  const known = ids.filter((id) => byId.has(id));
+  const helmet = known.findLast((id) => byId.get(id).slot === 'helmet') || 'h_p2';
+  const out = [helmet];
+  for (const id of known) {
+    const g = byId.get(id);
+    if (g.slot === 'helmet' || out.includes(id) || (g.only && !g.only.includes(helmet))) continue;
+    for (let i = out.length - 1; i > 0; i--) if (clash(g, byId.get(out[i]))) out.splice(i, 1);
+    if (!clash(g, byId.get(helmet))) out.push(id);
+  }
   return out.filter((id) => !byId.get(id).needs || out.includes(byId.get(id).needs));
+}
+
+const brings = (g) => (g.brings || []).filter((id) => byId.has(id));
+
+// the pictures for a kit: some pieces look different next to others
+function pictures(kit) {
+  const out = [kit.map((id) => byId.get(id).body).find(Boolean) || 'body'];
+  for (const id of kit) {
+    const g = byId.get(id);
+    const v = g.as?.find((x) => x.with.every((w) => kit.includes(w)));
+    out.push(v ? v.use : id);
+  }
+  return out;
 }
 
 function toggle(id) {
   const g = byId.get(id);
+  const was = [...state.kit];
   let kit = [...state.kit];
   if (kit.includes(id)) {
     if (g.slot === 'helmet') return;
     kit = kit.filter((x) => x !== id);
   } else {
-    if (g.slot) kit = kit.filter((x) => byId.get(x).slot !== g.slot);
     if (g.needs && !kit.includes(g.needs)) kit.push(g.needs);
-    kit.push(id);
+    kit.push(id, ...brings(g));
   }
   set(tidy(kit));
+  // pieces of other groups that had to come off
+  const off = was.filter((x) => x !== id && !state.kit.includes(x) && byId.get(x).area !== g.area).map((x) => byId.get(x).name);
+  if (off.length) say(`${new Intl.ListFormat('en').format(off)} taken off`, 'Undo', () => set(was));
 }
 
 const code = () => [...state.kit.map((id) => id), state.pose].join('.');
@@ -41,7 +68,7 @@ export const link = () => `${location.origin}${location.pathname}#kit=${code()}`
 
 function parse(text) {
   const bits = text.split('.');
-  const pose = bits.find((b) => poses.some((p) => p.id === b));
+  const pose = bits.find((b) => b === 'own' || poses.some((p) => p.id === b));
   return { kit: tidy(bits.filter((b) => byId.has(b))), pose };
 }
 
@@ -56,8 +83,8 @@ export function setupBuilder() {
     b.id = `area-${a.id}`;
     b.setAttribute('role', 'tab');
     b.setAttribute('aria-controls', 'build-options');
-    b.innerHTML = '<span></span><i></i>';
-    b.firstChild.textContent = a.name;
+    b.innerHTML = `<svg viewBox="0 0 100 100" aria-hidden="true"><path d="${icons[a.id]}"/></svg><span></span><i></i>`;
+    b.querySelector('span').textContent = a.name;
     b.addEventListener('click', () => openArea(a.id, true));
     tabs.append(b);
   }
@@ -70,20 +97,39 @@ export function setupBuilder() {
     tabs.children[n].focus();
   });
 
-  // poses
-  const row = $('#pose-row');
-  for (const p of poses) {
-    const l = document.createElement('label');
-    l.className = 'pose';
-    l.innerHTML = `<input type="radio" name="pose" value="${p.id}"><img src="assets/poses/${p.id}.webp" alt="" width="540" height="720" loading="lazy" decoding="async"><span></span>`;
-    l.querySelector('span').textContent = p.name;
-    row.append(l);
+  // poses, six to a page
+  const form = $('#pose-form');
+  for (let n = 0; n < poses.length; n += 6) {
+    const page = document.createElement('div');
+    page.className = 'pose-page';
+    for (const p of poses.slice(n, n + 6)) {
+      const l = document.createElement('label');
+      l.className = 'pose';
+      l.innerHTML = `<input type="radio" name="pose" value="${p.id}"><img src="assets/poses/${p.id}.webp" alt="" width="760" height="988" loading="lazy" decoding="async"><span></span>`;
+      l.querySelector('span').textContent = p.name;
+      page.append(l);
+    }
+    form.append(page);
   }
-  row.addEventListener('change', (e) => { state.pose = e.target.value; changed(); });
+  const pages = [...form.children];
+  const at = () => Math.round(form.scrollLeft / Math.max(1, form.clientWidth));
+  const mark = () => {
+    $('#pose-page').textContent = `${at() + 1} of ${pages.length}`;
+    $('#pose-prev').disabled = at() === 0;
+    $('#pose-next').disabled = at() >= pages.length - 1;
+  };
+  const go = (n) => form.scrollTo({ left: n * form.clientWidth, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
+  $('#pose-prev').addEventListener('click', () => go(at() - 1));
+  $('#pose-next').addEventListener('click', () => go(at() + 1));
+  form.addEventListener('scroll', mark, { passive: true });
+  addEventListener('resize', mark);
+  $('.pose-nav').hidden = pages.length < 2;
+  mark();
+  $('.poses').addEventListener('change', (e) => { if (e.target.name === 'pose') { state.pose = e.target.value; changed(); } });
 
   $('#build-random').addEventListener('click', shuffle);
   $('#build-reset').addEventListener('click', () => { set(['h_p2']); openArea('helmet', true); });
-  $('#build-full').addEventListener('click', () => look({ z: 1, y: 0.5, angle: 25 }));
+  $('#build-full').addEventListener('click', () => look({ z: 1, y: 0.5, angle: FRONT }));
 
   const start = location.hash.startsWith('#kit=') ? location.hash.slice(5) : stored();
   if (start) {
@@ -91,7 +137,7 @@ export function setupBuilder() {
     state.kit = s.kit;
     state.pose = s.pose || state.pose;
   }
-  row.querySelector(`[value="${state.pose}"]`).checked = true;
+  document.querySelector(`[name=pose][value="${state.pose}"]`).checked = true;
   openArea(area, false);
   if (location.hash.startsWith('#kit=')) $('#build').scrollIntoView({ behavior: 'instant' });
 
@@ -100,7 +146,7 @@ export function setupBuilder() {
     if (!es.some((e) => e.isIntersecting)) return;
     near.disconnect();
     set(state.kit);
-    look({ z: 1, y: 0.5, angle: 25 });
+    look({ z: 1, y: 0.5, angle: FRONT });
   }, { rootMargin: '900px 0px' });
   near.observe($('#build'));
   fire();
@@ -138,14 +184,16 @@ function options() {
     b.disabled = !!g.soon;
     const s = document.createElement('span');
     s.textContent = g.name;
-    if (!g.soon) {
-      const i = new Image();
-      i.src = `assets/kit/${g.id}/thumb.webp`;
-      i.alt = '';
-      i.width = i.height = 192;
-      b.append(i);
+    const i = new Image();
+    i.src = `assets/kit/${g.id}/thumb.webp?v=${ver[g.id]}`;
+    i.alt = '';
+    i.width = i.height = 192;
+    b.append(i, s);
+    if (g.soon) {
+      const w = document.createElement('small');
+      w.textContent = 'Coming soon';
+      b.append(w);
     }
-    b.append(s);
     b.addEventListener('click', () => toggle(g.id));
     return b;
   }));
@@ -154,14 +202,14 @@ function options() {
     b.type = 'button';
     b.className = 'piece-swap';
     b.textContent = 'Switch to Phase 2 for headgear';
-    b.addEventListener('click', () => { set(tidy(['h_p2', ...state.kit.filter((x) => byId.get(x).slot !== 'helmet')])); });
+    b.addEventListener('click', () => toggle('h_p2'));
     box.append(b);
   }
 }
 
 function set(kit) {
   state.kit = kit;
-  view.wear(['body', ...kit]);
+  view.wear(pictures(kit));
   const at = document.activeElement?.closest?.('.piece');
   const n = at ? [...at.parentElement.children].indexOf(at) : -1;
   options();
@@ -177,12 +225,13 @@ function changed() {
 function shuffle() {
   const take = (list) => list[Math.floor(Math.random() * list.length)];
   const helmet = take(ready.filter((g) => g.slot === 'helmet')).id;
-  const kit = [helmet];
+  const kit = [helmet, ...brings(byId.get(helmet))];
   const guns = ready.filter((g) => g.slot === 'weapon');
   if (guns.length) kit.push(take(guns).id);
+  const free = (g) => !kit.some((id) => clash(g, byId.get(id)));
   for (const a of areas) {
     if (a.id === 'helmet' || a.id === 'weapon') continue;
-    const list = ready.filter((g) => g.area === a.id && (!g.only || g.only.includes(helmet)));
+    const list = ready.filter((g) => g.area === a.id && (!g.only || g.only.includes(helmet)) && free(g) && (!g.needs || free(byId.get(g.needs))));
     if (list.length && Math.random() < 0.62) {
       const g = take(list);
       if (g.needs) kit.push(g.needs);
@@ -190,7 +239,7 @@ function shuffle() {
     }
   }
   set(tidy([...new Set(kit)]));
-  look({ z: 1, y: 0.5, angle: 25 });
+  look({ z: 1, y: 0.5, angle: FRONT });
 }
 
 function fire() {
@@ -208,12 +257,11 @@ export function summary() {
     helmet: byId.get(state.kit.find((id) => byId.get(id).slot === 'helmet')).name,
     gear: state.kit.filter((id) => !['helmet', 'weapon'].includes(byId.get(id).slot)).map((id) => byId.get(id).name),
     weapon: byId.get(state.kit.find((id) => byId.get(id).slot === 'weapon'))?.name,
-    pose: poses.find((p) => p.id === state.pose).name,
+    pose: poses.find((p) => p.id === state.pose)?.name || 'Your own, described below',
   };
 }
 
 export async function picture() {
-  view.cam = { x: 0.5, y: 0.5, z: 1 };
-  view.to = { x: 0.5, y: 0.5, z: 1 };
-  return view.picture();
+  if (!view.on.length) view.wear(pictures(state.kit));
+  return view.picture(FRONT);
 }

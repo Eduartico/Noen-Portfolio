@@ -16,11 +16,43 @@
 <link rel="apple-touch-icon" href="assets/icon-180.png">
 <link rel="preload" href="assets/fonts/anybody.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="assets/fonts/onest.woff2" as="font" type="font/woff2" crossorigin>
+<script>
+// a refresh comes back to the same place; the opening plays when that place is the top
+(() => {
+  const nav = performance.getEntriesByType('navigation')[0]?.type;
+  let y = 0;
+  if (nav === 'reload') {
+    history.scrollRestoration = 'manual';
+    try { y = window.backTo = +sessionStorage.getItem('noen-y') || 0; } catch {}
+  }
+  const root = document.documentElement;
+  if (y > 4) { // nothing is shown until the page stands where it was
+    root.classList.add('returning');
+    setTimeout(() => root.classList.remove('returning'), 2500);
+  }
+  if (y > innerHeight * 0.5 || !['', '#top'].includes(location.hash) || nav === 'back_forward' || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  root.classList.add('intro');
+  window.introGuard = setTimeout(() => root.classList.remove('intro'), 5000);
+})();
+</script>
 <link rel="stylesheet" href="css/site.css">
+<link rel="modulepreload" href="js/intro.js">
+<link rel="modulepreload" href="js/mark.js">
+<link rel="modulepreload" href="js/loop.js">
+<link rel="modulepreload" href="js/spin.js">
+<link rel="modulepreload" href="js/gallery.js">
+<link rel="modulepreload" href="js/builder.js">
+<link rel="modulepreload" href="js/ask.js">
+<link rel="modulepreload" href="js/kit.js">
+<link rel="modulepreload" href="js/toast.js">
+<link rel="modulepreload" href="js/data.js">
+<link rel="modulepreload" href="js/stage-data.js">
+<link rel="modulepreload" href="js/gear.js">
+<link rel="modulepreload" href="js/kit-data.js">
+<link rel="modulepreload" href="js/poses.js">
 <script type="module" src="js/main.js"></script>
 </head>
 <body>
-<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="noen" viewBox="0 0 1000 254"><path fill-rule="evenodd" d="M998.0 58.0L993.9 40.0L987.8 25.6L984.8 20.5L980.2 14.7L975.2 9.9L968.6 5.3L960.7 1.8L954.2 0.0L886.3 0.0L824.5 184.4L765.0 3.5L764.5 0.3L650.8 0.3L591.5 181.6L590.5 182.6L585.7 171.7L529.5 0.3L359.6 0.3L272.0 199.3L267.9 207.4L200.1 0.5L150.9 0.3L78.0 212.0L77.2 213.0L61.0 213.0L57.5 212.0L54.2 209.9L48.9 203.6L45.3 194.7L43.3 184.4L42.3 171.7L42.3 82.8L44.3 65.3L46.3 58.2L49.4 51.7L52.2 47.9L57.2 43.6L62.0 41.5L67.9 40.8L67.9 0.3L45.3 0.3L38.2 2.3L30.6 5.8L24.8 9.9L18.2 16.5L13.7 22.8L9.6 30.4L5.6 41.3L3.5 49.1L1.5 60.3L0.0 77.0L0.0 177.0L1.5 193.7L5.6 212.7L8.6 221.3L12.2 228.7L19.8 239.3L24.8 244.1L30.6 248.2L38.2 251.7L45.3 253.7L113.7 253.7L175.5 69.4L236.0 253.7L614.6 253.7L687.0 43.6L688.0 42.3L688.3 253.7L730.6 253.7L730.6 42.8L731.1 42.5L799.9 253.2L800.5 253.7L848.8 253.7L922.5 40.8L937.7 40.8L943.8 42.5L949.1 47.4L953.7 56.2L956.2 67.1L957.5 82.8L957.2 176.8L955.7 187.6L953.7 195.2L950.6 201.8L948.6 204.9L942.3 210.4L936.9 212.5L931.9 213.2L931.9 253.2L932.4 253.7L953.7 253.7L961.0 251.7L967.8 248.7L975.9 243.1L980.8 238.3L986.3 230.7L989.9 224.1L992.4 218.0L995.9 205.9L998.5 191.9L1000.0 170.2L1000.0 83.3ZM315.8 212.5L393.0 41.0L477.1 41.3L547.5 198.0L552.3 212.5L551.8 213.0L316.0 213.0Z"/></symbol></svg>
 <a class="skip" href="#work">Skip to the work</a>
 
 <header class="top">
@@ -48,12 +80,14 @@
     <div class="stage-view">
       <div class="stage-back" aria-hidden="true">
         <img class="paint" src="assets/paint.webp" alt="" width="1400" height="1600">
-        <svg class="stage-mark" viewBox="0 0 1000 254"><use href="#noen"></use></svg>
+        <img class="stage-mark" src="assets/mark-white.webp" alt="" width="2800" height="712" fetchpriority="high">
+        <img class="stage-noen" src="data:image/webp;base64,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" alt="" width="1960" height="498">
       </div>
       <div class="spin" id="spin" role="slider" tabindex="0" aria-label="Turn the trooper" aria-valuemin="0" aria-valuemax="359" aria-valuenow="0">
-        <img class="spin-poster" id="poster" src="assets/spin/grunt332/006.webp" alt="" fetchpriority="high">
+        <img class="spin-poster" id="poster" src="assets/spin/vaughn/011.webp?v=8e3e49" alt="" fetchpriority="high">
         <canvas></canvas>
       </div>
+      <button class="intro-skip" type="button" aria-label="Skip the opening"></button>
     </div>
 
     <div class="stage-screen hero">
@@ -66,7 +100,7 @@
       </div>
       <fieldset class="picker">
         <legend class="vh">Trooper on stage</legend>
-        <p class="picker-name" aria-live="polite"><b id="picker-name">Trooper</b><span id="picker-unit">332nd Company</span></p>
+        <p class="picker-name" aria-live="polite"><b id="picker-name">Vaughn</b><span id="picker-unit">332nd Company</span></p>
         <div class="picker-row" id="picker-row"></div>
         <p class="spin-hint" id="spin-hint"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12c0-2.8 3.6-5 8-5s8 2.2 8 5-3.6 5-8 5"/><path d="m14.5 14-3 3 3 3"/></svg>Drag to turn</p>
       </fieldset>
@@ -89,9 +123,7 @@
   </section>
 
   <section class="work" id="work" aria-labelledby="work-title">
-    <h2 id="work-title">Showcases</h2>
-    <div class="shows" id="shows"></div>
-    <h2 class="work-next">Scenes</h2>
+    <h2 id="work-title">Finished renders</h2>
     <ul class="wall" id="wall"></ul>
   </section>
 
@@ -101,8 +133,8 @@
         <h2 id="build-title">Build your clone</h2>
         <div class="build-areas" id="build-areas" role="tablist" aria-label="Parts" aria-orientation="vertical"></div>
         <div class="build-tools">
-          <button class="btn btn-edge" type="button" id="build-random">Shuffle his kit</button>
-          <button class="btn btn-edge" type="button" id="build-reset">Strip to plain armour</button>
+          <button class="btn btn-edge" type="button" id="build-random"><svg class="line" viewBox="0 0 100 100" aria-hidden="true"><path d="M8 30h16c18 0 30 40 48 40h16M8 70h16c7 0 13-6 18-14M54 44c5-8 11-14 18-14h16M74 14l16 16-16 16M74 54l16 16-16 16"/></svg>Shuffle his kit</button>
+          <button class="btn btn-edge" type="button" id="build-reset"><svg class="line" viewBox="0 0 100 100" aria-hidden="true"><path d="M20 38a35 35 0 1 1-4 20M18 13v26h26"/></svg>Strip to plain armour</button>
         </div>
       </div>
       <div class="build-stage" id="build-stage" role="slider" tabindex="0" aria-label="Turn the clone" aria-valuemin="0" aria-valuemax="359" aria-valuenow="25">
@@ -115,8 +147,19 @@
   </section>
 
   <section class="poses" aria-labelledby="poses-title">
-    <h2 id="poses-title">Pick his pose</h2>
-    <fieldset class="pose-row" id="pose-row"><legend class="vh">Pose</legend></fieldset>
+    <div class="poses-in">
+      <div class="poses-side">
+        <h2 id="poses-title">Some of the poses he can take</h2>
+        <p>Have another one in mind? Pick your own and describe it in the brief.</p>
+        <label class="pose-own"><input type="radio" name="pose" value="own" form="pose-form"><span>Your own pose</span></label>
+        <div class="pose-nav">
+          <button type="button" id="pose-prev" aria-label="Previous poses"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14.5 5-7 7 7 7"/></svg></button>
+          <span id="pose-page"></span>
+          <button type="button" id="pose-next" aria-label="More poses"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9.5 5 7 7-7 7"/></svg></button>
+        </div>
+      </div>
+      <form class="pose-pages" id="pose-form" aria-label="Poses"></form>
+    </div>
   </section>
 
   <section class="ask" id="prices" aria-labelledby="prices-title">
@@ -126,21 +169,21 @@
         <legend class="vh">Type of render</legend>
         <label class="way">
           <input type="radio" name="offer" value="Trooper still" data-price="89.99" checked>
-          <img src="assets/work/14-slate-1280.webp" alt="" width="1280" height="1707" loading="lazy" decoding="async">
+          <img src="assets/work/rex-run-1280.webp" alt="" width="1280" height="1707" loading="lazy" decoding="async" style="object-position:50% 60%">
           <b>Trooper still</b>
           <span>One custom trooper on a studio background, painted to your brief, in one 4K render.</span>
           <em>€89.99, or €79.99 for the first five</em>
         </label>
         <label class="way">
           <input type="radio" name="offer" value="Trooper video" data-price="119.99">
-          <img src="assets/work/rex-pistols-1280.webp" alt="" width="1280" height="1707" loading="lazy" decoding="async">
+          <i class="way-soon">First video in the works</i>
           <b>Trooper video</b>
           <span>The same trooper in an idle clip, with the still included.</span>
           <em>€119.99</em>
         </label>
         <label class="way">
           <input type="radio" name="offer" value="Scene" data-price="119.99">
-          <img src="assets/work/kachirho-1280.webp" alt="" width="1280" height="720" loading="lazy" decoding="async" style="object-position:14% 50%">
+          <img src="assets/work/quantum-1280.webp" alt="" width="1280" height="720" loading="lazy" decoding="async" style="object-position:50% 50%">
           <b>Scene</b>
           <span>Your trooper in a location, with up to two vehicles and two background clones.</span>
           <em>€119.99</em>
@@ -180,7 +223,6 @@
           <label class="consent"><input class="tick" type="checkbox" name="consent" required><span>Start now. I understand I lose the right to cancel once the final files are delivered.</span></label>
           <div class="brief-do">
             <button class="btn btn-fill" type="submit">Copy my brief</button>
-            <button class="btn btn-edge" type="button" id="save-pic">Save his picture</button>
           </div>
         </div>
       </div>
@@ -211,10 +253,10 @@
   <div class="wrap">
     <h2>Tell me about your trooper</h2>
     <div class="end-links">
-      <a class="btn btn-dark" href="https://www.instagram.com/" data-contact="instagram">Message on Instagram</a>
-      <a class="btn btn-edge" href="https://discord.com/" data-contact="discord">Message on Discord</a>
+      <a class="btn btn-dark" href="https://www.instagram.com/commander.noen/" data-contact="instagram" target="_blank" rel="noopener">Message on Instagram</a>
+      <button class="btn btn-edge" type="button" disabled>Discord coming soon</button>
     </div>
-    <svg class="end-mark" viewBox="0 0 1000 254" aria-hidden="true"><use href="#noen"></use></svg>
+    <div class="end-mark" aria-hidden="true"><img src="assets/mark-black.webp" alt="" width="2800" height="712" loading="lazy" decoding="async"></div>
     <p class="legal">Fan-made work, not affiliated with or endorsed by Lucasfilm or Disney.</p>
   </div>
 </footer>
