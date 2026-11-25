@@ -97,12 +97,12 @@ export function setupBuilder() {
     tabs.children[n].focus();
   });
 
-  // poses, six to a page
+  // poses, eight to a page
   const form = $('#pose-form');
-  for (let n = 0; n < poses.length; n += 6) {
+  for (let n = 0; n < poses.length; n += 8) {
     const page = document.createElement('div');
     page.className = 'pose-page';
-    for (const p of poses.slice(n, n + 6)) {
+    for (const p of poses.slice(n, n + 8)) {
       const l = document.createElement('label');
       l.className = 'pose';
       l.innerHTML = `<input type="radio" name="pose" value="${p.id}"><img src="assets/poses/${p.id}.webp" alt="" width="760" height="988" loading="lazy" decoding="async"><span></span>`;
