@@ -168,7 +168,7 @@ export const ver = {
   w_kama: '1ebdf8',
   w_kamahol: '897e0d',
   w_hol: '1b28fc',
-  w_arcgear: '4b6040',
+  w_arcgear: '2c42ec',
   w_leg: 'ed169a',
   r_arc: '70a677',
   l_arc: '69dd69',

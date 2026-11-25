@@ -52,7 +52,7 @@ export const gear = [
   { id: 'w_kama', area: 'waist', name: 'Kama', off: ['w_hol', 'w_leg'] },
   { id: 'w_kamahol', area: 'waist', name: 'Kama holsters', slot: 'holster', needs: 'w_kama' },
   { id: 'w_hol', area: 'waist', name: 'Thigh holsters', slot: 'holster' },
-  { id: 'w_arcgear', area: 'waist', name: 'Belt pouches', off: ['w_hol', 'c_ranger'] },
+  { id: 'w_arcgear', area: 'waist', name: 'Belt pouches', needs: 'w_kama', off: ['w_hol', 'c_ranger'] },
   { id: 'w_leg', area: 'waist', name: 'Leg pouch' },
   { id: 'r_arc', area: 'limbs', name: 'ARC gauntlets' },
   { id: 'l_arc', area: 'limbs', name: 'ARC shin guards', off: ['w_knife'] },
