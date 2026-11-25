@@ -198,12 +198,10 @@ function options() {
     return b;
   }));
   if (!list.length && area === 'head') {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'piece-swap';
-    b.textContent = 'Switch to Phase 2 for headgear';
-    b.addEventListener('click', () => toggle('h_p2'));
-    box.append(b);
+    const p = document.createElement('p');
+    p.className = 'piece-none';
+    p.textContent = `No headgear fits the ${byId.get(helmet).name} helmet`;
+    box.append(p);
   }
 }
 

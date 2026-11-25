@@ -298,7 +298,7 @@ h2 { font-size: clamp(1.9rem, 4.2vw, 3.6rem); }
   &:disabled { background: #16151459; color: #ffffffd9; grid-template-rows: 1fr auto auto; cursor: default; transform: none; img { opacity: .4; filter: grayscale(1); } }
   small { font-size: .8125rem; line-height: 1.2; }
 }
-.piece-swap { grid-column: 1 / -1; min-height: 4rem; padding: 1rem; border: 0; border-radius: var(--r); background: var(--black); color: var(--white); font-weight: 600; cursor: pointer; }
+.piece-none { grid-column: 1 / -1; padding: .5rem 0; font-weight: 600; text-wrap: balance; }
 @media (hover: hover) and (pointer: fine) {
   .build-areas button:hover span { translate: .3rem 0; }
   .piece:hover:not(:disabled) img { transform: scale(1.08); }
