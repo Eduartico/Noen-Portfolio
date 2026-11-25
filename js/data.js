@@ -15,8 +15,8 @@ export const works = [
     set: [['332-vaughn', 'Vaughn'], ['332-appo', 'Appo'], ['332-grunt', 'Trooper with Z-6'], ['332-noen', 'Noen']],
   },
   {
-    id: 'rex-pistols', title: 'Captain Rex', span: 4, rows: 4, at: '50% 12%',
-    set: [['rex-pistols', 'Captain Rex'], ['rex-aim', 'Captain Rex'], ['rex-belly', 'Captain Rex'], ['rex-run', 'Captain Rex']],
+    id: 'rex-run', title: 'Captain Rex', span: 4, rows: 4, at: '50% 12%',
+    set: [['rex-run', 'Captain Rex'], ['rex-pistols', 'Captain Rex'], ['rex-aim', 'Captain Rex'], ['rex-belly', 'Captain Rex']],
   },
   {
     id: '14-titus', title: '14th Panda Company', span: 4, rows: 4, at: '50% 12%',
