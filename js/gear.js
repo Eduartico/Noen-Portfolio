@@ -30,6 +30,7 @@ export const gear = [
   { id: 'a_torch', area: 'head', name: 'Helmet camera', only: ['h_p2', 'h_barc', 'h_para', 'h_arf'], as: [{ with: ['h_barc'], use: 'a_torch_barc' }, { with: ['h_para'], use: 'a_torch_para' }, { with: ['h_arf'], use: 'a_torch_arf' }] },
   { id: 'a_lampl', area: 'head', name: 'Left light', only: ['h_p2', 'h_barc', 'h_para', 'h_arf'], as: [{ with: ['h_barc'], use: 'a_lampl_barc' }, { with: ['h_para'], use: 'a_lampl_para' }, { with: ['h_arf'], use: 'a_lampl_arf' }] },
   { id: 'a_lampr', area: 'head', name: 'Right light', only: ['h_p2', 'h_barc', 'h_para', 'h_arf'], as: [{ with: ['h_barc'], use: 'a_lampr_barc' }, { with: ['h_para'], use: 'a_lampr_para' }, { with: ['h_arf'], use: 'a_lampr_arf' }] },
+  { id: 'a_flaps', area: 'head', name: 'Mud flaps', only: ['h_arf'] },
   { id: 'a_fin', area: 'head', name: 'Phase 1 fin', only: ['h_p2', 'h_barc', 'h_para'], off: ['a_pad'], as: [{ with: ['a_bacara', 'h_para'], use: 'a_fin_shellp' }, { with: ['a_bacara', 'h_barc'], use: 'a_fin_shellb' }, { with: ['a_bacara'], use: 'a_fin_shell' }, { with: ['h_barc'], use: 'a_fin_barc' }, { with: ['h_para'], use: 'a_fin_para' }] },
   { id: 's_paul', area: 'shoulders', name: 'Commander pauldron', slot: 'pauldron', off: ['c_pouch', 'c_band', 'c_ranger'] },
   { id: 's_arc', area: 'shoulders', name: 'ARC pauldron', slot: 'pauldron', off: ['c_pouch', 'c_band', 'c_ranger'] },

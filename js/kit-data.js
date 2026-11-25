@@ -42,6 +42,7 @@ export const boxes = {
   a_lampr_arf: [361, 227, 178, 24],
   a_lampr_para: [361, 225, 178, 25],
   a_lampr_barc: [365, 223, 170, 24],
+  a_flaps: [359, 239, 182, 131],
   a_fin: [365, 123, 170, 62],
   a_fin_shellp: [362, 130, 176, 60],
   a_fin_para: [361, 145, 177, 61],
@@ -135,6 +136,7 @@ export const ver = {
   a_lampr_arf: 'ffab09',
   a_lampr_para: '515c1d',
   a_lampr_barc: 'b0a4f1',
+  a_flaps: '3e093e',
   a_fin: '7471cd',
   a_fin_shellp: '8b91a4',
   a_fin_para: '8870af',
@@ -188,4 +190,4 @@ export const ver = {
 // higher = worn over pieces that lie almost on the same surface
 export const layers = { s_paul: 2, s_arc: 2, c_strap: 3, c_band: 1, c_band_arc: 1, c_ranger: 1, c_pouchr: 1, c_pouch: 1, c_pouch_arc: 1, c_pouchr_arc: 1, w_kamahol: 1, w_hol: 1, w_arcgear: 1, w_leg: 1 };
 // pieces with 12 bit depth
-export const fine = new Set(['body', 'h_p2', 'h_p1', 'h_barc', 'h_arf', 'h_pilot', 'h_para', 'h_eng', 'h_spec', 'a_range', 'a_ant', 'a_sun', 'a_macro', 'a_bacara', 'a_pad', 'a_torch', 'a_lampl', 'a_lampr', 'a_fin', 'a_range_barc', 'a_bacara_barc', 's_paul', 's_arc', 's_clip', 's_aerial', 'b_pack', 'b_arc', 'b_jet', 'b_inc', 'b_snow', 'b_coms', 'w_kama', 'w_kamahol', 'w_hol', 'w_arcgear', 'w_leg', 'r_arc', 'l_arc', 'l_feet', 'w_knife', 'g_dc15s', 'g_dc15a', 'g_dc15le', 'g_dc15x', 'g_dc17', 'g_dc17m', 'g_dc19', 'g_westar', 'g_dp23', 'g_fire', 'g_rps6', 'g_z6', 'c_arc', 'c_strap', 'c_band', 'c_ranger', 'c_pouch', 'h_p2_nofin', 'h_barc_nofin', 'a_fin_barc', 'a_fin_shell', 'a_fin_shellb', 'c_tubes', 'a_range_arf', 'a_range_para', 'a_ant_para', 'a_ant_barc', 'a_sun_para', 'a_sun_barc', 'a_macro_para', 'a_macro_barc', 'a_bacara_para', 'a_pad_para', 'a_pad_barc', 'a_torch_arf', 'a_torch_para', 'a_torch_barc', 'a_lampl_arf', 'a_lampl_para', 'a_lampl_barc', 'a_lampr_arf', 'a_lampr_para', 'a_lampr_barc', 'a_fin_shellp', 'a_fin_para', 'c_band_arc', 'c_pouchr', 'c_pouch_arc', 'c_pouchr_arc', 'body_z6']);
+export const fine = new Set(['body', 'h_p2', 'h_p1', 'h_barc', 'h_arf', 'h_pilot', 'h_para', 'h_eng', 'h_spec', 'a_range', 'a_ant', 'a_sun', 'a_macro', 'a_bacara', 'a_pad', 'a_torch', 'a_lampl', 'a_lampr', 'a_fin', 'a_range_barc', 'a_bacara_barc', 's_paul', 's_arc', 's_clip', 's_aerial', 'b_pack', 'b_arc', 'b_jet', 'b_inc', 'b_snow', 'b_coms', 'w_kama', 'w_kamahol', 'w_hol', 'w_arcgear', 'w_leg', 'r_arc', 'l_arc', 'l_feet', 'w_knife', 'g_dc15s', 'g_dc15a', 'g_dc15le', 'g_dc15x', 'g_dc17', 'g_dc17m', 'g_dc19', 'g_westar', 'g_dp23', 'g_fire', 'g_rps6', 'g_z6', 'c_arc', 'c_strap', 'c_band', 'c_ranger', 'c_pouch', 'h_p2_nofin', 'h_barc_nofin', 'a_fin_barc', 'a_fin_shell', 'a_fin_shellb', 'c_tubes', 'a_range_arf', 'a_range_para', 'a_ant_para', 'a_ant_barc', 'a_sun_para', 'a_sun_barc', 'a_macro_para', 'a_macro_barc', 'a_bacara_para', 'a_pad_para', 'a_pad_barc', 'a_torch_arf', 'a_torch_para', 'a_torch_barc', 'a_lampl_arf', 'a_lampl_para', 'a_lampl_barc', 'a_lampr_arf', 'a_lampr_para', 'a_lampr_barc', 'a_fin_shellp', 'a_fin_para', 'c_band_arc', 'c_pouchr', 'c_pouch_arc', 'c_pouchr_arc', 'body_z6', 'a_flaps']);
