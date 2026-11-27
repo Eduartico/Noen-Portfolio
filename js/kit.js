@@ -355,12 +355,24 @@ export class Kit {
   }
 
   // the clone alone from one angle, cut out of the canvas; the view stays where it is
-  async picture(angle) {
+  async picture(angle, full = false) {
     const n = this.frame(angle);
     const parts = this.on.map((id) => this.parts.get(id)).filter(Boolean);
     if (!this.gl || !parts.length) return null;
     await Promise.all(parts.map((p) => p.one(n)));
     await Promise.all(parts.map((p) => this.upload(p, n)));
+    if (full) {  // the whole frame at the size it was rendered, for the saved picture
+      const { canvas } = this;
+      const was = [canvas.width, canvas.height];
+      [canvas.width, canvas.height] = size;
+      this.draw(angle, { x: 0.5, y: 0.5, z: 1 });
+      const c = document.createElement('canvas');
+      [c.width, c.height] = size;
+      c.getContext('2d').drawImage(canvas, 0, 0);
+      [canvas.width, canvas.height] = was;
+      this.draw();
+      return c;
+    }
     this.draw(angle, { x: 0.5, y: 0.5, z: 1 });
     const { width: w, height: h } = this.canvas;
     const fit = Math.min(1, w / h / 0.42);

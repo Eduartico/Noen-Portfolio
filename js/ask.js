@@ -1,5 +1,5 @@
 import { locations, vehicles } from './data.js';
-import { onKit, summary, link, picture } from './builder.js';
+import { onKit, summary, link, picture, poster } from './builder.js';
 import { say } from './toast.js';
 
 const $ = (s) => document.querySelector(s);
@@ -81,6 +81,26 @@ export function setupAsk() {
 
   form.addEventListener('change', refresh);
   form.addEventListener('input', save);
+  $('#save-pic').addEventListener('click', async (e) => {
+    const b = e.currentTarget;
+    b.disabled = true;
+    try {
+      const blob = await poster();
+      if (!blob) return;
+      const file = new File([blob], 'my-clone-noen.dev.jpg', { type: 'image/jpeg' });
+      // phones: the share sheet saves it straight to the photos
+      if (matchMedia('(pointer: coarse)').matches && navigator.canShare?.({ files: [file] })) {
+        try { await navigator.share({ files: [file] }); return; } catch (err) { if (err.name === 'AbortError') return; }
+      }
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(file);
+      a.download = file.name;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    } finally {
+      b.disabled = false;
+    }
+  });
   refresh();
 
   const text = () => {

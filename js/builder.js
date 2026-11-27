@@ -263,3 +263,45 @@ export async function picture() {
   if (!view.on.length) view.wear(pictures(state.kit));
   return view.picture(FRONT);
 }
+
+// the picture people save: his whole frame on the builder's paint, 1080 x 1350 for Instagram
+export async function poster() {
+  if (!view.on.length) view.wear(pictures(state.kit));
+  const [frame, paint] = await Promise.all([view.picture(FRONT, true), new Promise((ok) => {
+    const i = new Image();
+    i.onload = () => ok(i);
+    i.onerror = () => ok(null);
+    i.src = 'assets/paint-flat.webp';
+  }), document.fonts.load('800 36px Anybody').catch(() => {})]);
+  if (!frame) return null;
+  const c = document.createElement('canvas');
+  c.width = 1080;
+  c.height = 1350;
+  const g = c.getContext('2d');
+  g.fillStyle = '#cf6240';
+  g.fillRect(0, 0, c.width, c.height);
+  if (paint) {
+    const s = Math.max(c.width / paint.width, c.height / paint.height);
+    g.drawImage(paint, (c.width - paint.width * s) / 2, (c.height - paint.height * s) / 2, paint.width * s, paint.height * s);
+  }
+  const s = (c.height * 0.96) / frame.height;
+  const w = frame.width * s, h = frame.height * s;
+  const x = (c.width - w) / 2, y = c.height - 66 - 0.955 * h;
+  const fx = c.width / 2, fy = y + 0.955 * h;
+  g.save();  // the ground shadow of the builder
+  g.translate(fx, fy);
+  g.scale(1, 110 / 560);
+  const r = 280 * s;
+  const sh = g.createRadialGradient(0, 0, 0, 0, 0, r);
+  sh.addColorStop(0, '#100d0b8c');
+  sh.addColorStop(1, '#100d0b00');
+  g.fillStyle = sh;
+  g.fillRect(-r, -r, 2 * r, 2 * r);
+  g.restore();
+  g.drawImage(frame, x, y, w, h);
+  g.font = '800 36px Anybody';
+  g.fillStyle = '#161514';
+  g.textBaseline = 'alphabetic';
+  g.fillText('noen.dev', 46, c.height - 44);
+  return new Promise((ok) => c.toBlob(ok, 'image/jpeg', 0.92));
+}
